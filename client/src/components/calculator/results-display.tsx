@@ -1,11 +1,13 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { LoanCalculation } from "@shared/schema";
-import { formatCurrency, formatWeight, getGoldPurityLabel, createDataUrl, createWhatsAppLink } from "@/lib/utils";
+import { formatCurrency, formatWeight, getGoldPurityLabel } from "@/lib/utils";
 import { Calculator, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FaWhatsapp } from "react-icons/fa";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 interface ResultsDisplayProps {
   results: LoanCalculation | null;
@@ -57,10 +59,33 @@ Interest Amount: ${formatCurrency(results.interestAmount)}
 Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
 `.trim();
 
+  const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState("");
+
   const handleShareViaWhatsApp = () => {
+    setIsContactDialogOpen(true);
+  };
+
+  const handleShareWithContact = () => {
     try {
-      const whatsappUrl = createWhatsAppLink(shareMessageText);
+      if (!phoneNumber) {
+        toast({
+          title: "Error",
+          description: "Please enter a phone number",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Format phone number (remove spaces and add country code if needed)
+      const formattedNumber = phoneNumber.replace(/\s+/g, '');
+      const whatsappNumber = formattedNumber.startsWith('+') ? formattedNumber.substring(1) : formattedNumber;
+      
+      // Create WhatsApp URL with phone number and message
+      const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(shareMessageText)}`;
       window.open(whatsappUrl, "_blank");
+      setIsContactDialogOpen(false);
+      setPhoneNumber("");
     } catch (error) {
       toast({
         title: "Error",
@@ -157,7 +182,32 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
         </CardContent>
       </Card>
 
-      
+      <Dialog open={isContactDialogOpen} onOpenChange={setIsContactDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enter Customer's Phone Number</DialogTitle>
+          </DialogHeader>
+          <div className="py-6">
+            <Input
+              type="tel"
+              placeholder="Enter phone number (with country code)"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+            />
+            <p className="text-sm text-gray-500 mt-2">
+              Format: Country code + Number (e.g., +919876543210)
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsContactDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleShareWithContact}>
+              Share via WhatsApp
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
