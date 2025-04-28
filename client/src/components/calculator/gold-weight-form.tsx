@@ -45,6 +45,13 @@ export default function GoldWeightForm({ onCalculate, onCalculating }: GoldWeigh
     },
     onSuccess: (data) => {
       onCalculate(data);
+      // Scroll to results
+      setTimeout(() => {
+        const resultsElement = document.querySelector('.results-display');
+        if (resultsElement) {
+          resultsElement.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
     },
     onError: (error) => {
       toast({

@@ -140,7 +140,7 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
   
   return (
     <>
-      <Card className="h-full">
+      <Card className="h-full results-display">
         <CardContent className="p-6">
           <h3 className="text-lg font-semibold mb-4 text-slate-800">Calculation Results</h3>
           
@@ -218,6 +218,9 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
         <DialogContent className="sm:max-w-[350px]">
           <DialogHeader>
             <DialogTitle>Enter Phone Number</DialogTitle>
+            <DialogDescription>
+              Enter the WhatsApp number where you'd like to share the calculation
+            </DialogDescription>
           </DialogHeader>
           
           <div className="py-2">
