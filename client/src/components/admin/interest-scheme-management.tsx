@@ -70,13 +70,14 @@ export default function InterestSchemeManagement() {
         toast({ title: "Error", description: "Rate must be a positive number", variant: "destructive" });
         return;
       }
-      if (!newLabel || !newLabel.trim()) {
+      const label = newLabel.trim();
+      if (!label) {
         toast({ title: "Error", description: "Label is required", variant: "destructive" });
         return;
       }
       addMutation.mutate({ 
-        rate: rate,
-        label: newLabel.trim()
+        rate: parseFloat(rate.toFixed(2)),
+        label: label
       });
       setNewRate("");
       setNewLabel("");
