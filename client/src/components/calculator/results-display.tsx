@@ -94,36 +94,34 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
 
     // Create a blob from data URL
     if (imageDataUrl) {
+      const whatsappUrl = `https://api.whatsapp.com/send?phone=${phoneNumber}`;
+      
+      // Convert data URL to blob and create download
       fetch(imageDataUrl)
         .then(res => res.blob())
         .then(blob => {
-          // Create a file from the blob
-          const file = new File([blob], "gold-calculation.jpg", { type: "image/jpeg" });
-
-          // Create a WhatsApp share URL with the phone number (without text)
-          const whatsappUrl = `https://wa.me/${phoneNumber}`;
-
-          // Try to share the file - this may not work in all browsers
-          if (navigator.share) {
-            navigator.share({
-              files: [file]
-            }).catch(() => {
-              // Fallback to opening WhatsApp without text
-              window.open(whatsappUrl, "_blank");
-            });
-          } else {
-            // Fallback to opening WhatsApp without text
-            window.open(whatsappUrl, "_blank");
-          }
-
-          setIsContactDialogOpen(false);
+          const formData = new FormData();
+          formData.append('file', blob, 'gold-calculation.jpg');
+          
+          // First open WhatsApp chat with the specific number
+          window.open(whatsappUrl, '_blank');
+          
+          // Then trigger file download so user can share it
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = 'gold-calculation.jpg';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
         });
     } else {
-      // If no image, just open WhatsApp chat
-      const whatsappUrl = `https://wa.me/${phoneNumber}`;
-      window.open(whatsappUrl, "_blank");
-      setIsContactDialogOpen(false);
+      // If no image, just open WhatsApp chat with the specific number
+      const whatsappUrl = `https://api.whatsapp.com/send?phone=${phoneNumber}`;
+      window.open(whatsappUrl, '_blank');
     }
+    setIsContactDialogOpen(false);
   };
 
   const handleDownloadImage = () => {
