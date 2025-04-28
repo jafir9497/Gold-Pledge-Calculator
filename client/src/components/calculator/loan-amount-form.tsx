@@ -6,8 +6,8 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { interestSchemes, LoanCalculation } from "@shared/schema";
-import { useMutation } from "@tanstack/react-query";
+import { InterestScheme, LoanCalculation } from "@shared/schema";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -28,6 +28,10 @@ interface LoanAmountFormProps {
 
 export default function LoanAmountForm({ onCalculate, onCalculating }: LoanAmountFormProps) {
   const { toast } = useToast();
+  
+  const { data: interestSchemes = [] } = useQuery<InterestScheme[]>({
+    queryKey: ["/api/interest-schemes"],
+  });
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
