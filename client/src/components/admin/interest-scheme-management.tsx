@@ -65,8 +65,12 @@ export default function InterestSchemeManagement() {
 
   const handleAdd = () => {
     const rate = parseFloat(newRate);
-    if (isNaN(rate)) {
-      toast({ title: "Error", description: "Invalid rate", variant: "destructive" });
+    if (isNaN(rate) || rate <= 0) {
+      toast({ title: "Error", description: "Rate must be a positive number", variant: "destructive" });
+      return;
+    }
+    if (!newLabel.trim()) {
+      toast({ title: "Error", description: "Label is required", variant: "destructive" });
       return;
     }
     addMutation.mutate({ rate, label: newLabel });
