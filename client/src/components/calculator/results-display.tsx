@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FaWhatsapp } from "react-icons/fa";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
 interface ResultsDisplayProps {
@@ -16,9 +16,6 @@ interface ResultsDisplayProps {
 
 export default function ResultsDisplay({ results, isCalculating }: ResultsDisplayProps) {
   const [isSharingImage, setIsSharingImage] = useState(false);
-  const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
-  const [customNumber, setCustomNumber] = useState("");
-  const [imageDataUrl, setImageDataUrl] = useState("");
   const { toast } = useToast();
 
   if (isCalculating) {
