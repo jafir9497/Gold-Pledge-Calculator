@@ -24,8 +24,8 @@ export const interestSchemes = pgTable("interest_schemes", {
 });
 
 export const insertInterestSchemeSchema = z.object({
-  rate: z.number().positive("Rate must be positive").step(0.1, "Rate can have up to 1 decimal place"),
-  label: z.string().min(1, "Label is required").regex(/^[\w\s%.-]+$/, "Label can only contain letters, numbers, spaces, and . - %"),
+  rate: z.number().positive("Rate must be positive").multipleOf(0.1, "Rate must be a multiple of 0.1"),
+  label: z.string().min(1, "Label is required").max(50, "Label must not exceed 50 characters"),
 });
 
 export type InsertInterestScheme = z.infer<typeof insertInterestSchemeSchema>;
