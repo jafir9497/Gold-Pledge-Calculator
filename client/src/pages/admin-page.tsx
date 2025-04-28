@@ -4,7 +4,8 @@ import GoldRateForm from "@/components/admin/gold-rate-form";
 import GoldRatesTable from "@/components/admin/gold-rates-table";
 import UserManagement from "@/components/admin/user-management";
 import { Redirect } from "wouter";
-import { Loader2, Coins, Users } from "lucide-react";
+import { Loader2, Coins, Users, Percent } from "lucide-react";
+import InterestSchemeManagement from "@/components/admin/interest-scheme-management";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function AdminPage() {
@@ -25,7 +26,7 @@ export default function AdminPage() {
         <h1 className="text-3xl font-bold text-slate-800 mb-6">Admin Dashboard</h1>
         
         <Tabs defaultValue="gold-rates" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
+          <TabsList className="grid w-full grid-cols-3 mb-8">
             <TabsTrigger value="gold-rates" className="flex items-center gap-2">
               <Coins className="h-4 w-4" />
               <span>Gold Rate Management</span>
@@ -33,6 +34,10 @@ export default function AdminPage() {
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               <span>User Management</span>
+            </TabsTrigger>
+            <TabsTrigger value="schemes" className="flex items-center gap-2">
+              <Percent className="h-4 w-4" />
+              <span>Interest Schemes</span>
             </TabsTrigger>
           </TabsList>
           
@@ -58,6 +63,13 @@ export default function AdminPage() {
           
           <TabsContent value="users" className="mt-0">
             <UserManagement />
+          </TabsContent>
+          
+          <TabsContent value="schemes" className="mt-0">
+            <div className="bg-white rounded-md shadow-sm p-6">
+              <h2 className="text-xl font-semibold mb-6">Interest Scheme Management</h2>
+              <InterestSchemeManagement />
+            </div>
           </TabsContent>
         </Tabs>
       </div>

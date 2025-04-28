@@ -16,12 +16,20 @@ export const goldRates = pgTable("gold_rates", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const interestSchemes = [
-  { id: 1, rate: 0.5, label: "0.5% Interest" },
-  { id: 2, rate: 1.0, label: "1.0% Interest" },
-  { id: 3, rate: 1.5, label: "1.5% Interest" },
-  { id: 4, rate: 2.0, label: "2.0% Interest" },
-];
+export const interestSchemes = pgTable("interest_schemes", {
+  id: serial("id").primaryKey(),
+  rate: real("rate").notNull(),
+  label: text("label").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertInterestSchemeSchema = createInsertSchema(interestSchemes).pick({
+  rate: true,
+  label: true,
+});
+
+export type InsertInterestScheme = z.infer<typeof insertInterestSchemeSchema>;
+export type InterestScheme = typeof interestSchemes.$inferSelect;
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
