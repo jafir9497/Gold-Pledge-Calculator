@@ -2,10 +2,13 @@ import {
   users, type User, type InsertUser, 
   goldRates, type GoldRate, type InsertGoldRate 
 } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 // modify the interface with any CRUD methods
 // you might need
@@ -22,29 +25,28 @@ export interface IStorage {
   
   // Session store
   sessionStore: session.SessionStore;
+  // Initialize default gold rates if needed
+  initDefaultGoldRates(): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private goldRates: Map<number, GoldRate>;
+export class DatabaseStorage implements IStorage {
   sessionStore: session.SessionStore;
-  currentUserId: number;
-  currentGoldRateId: number;
 
   constructor() {
-    this.users = new Map();
-    this.goldRates = new Map();
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000, // Clear expired sessions every day
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
     });
-    this.currentUserId = 1;
-    this.currentGoldRateId = 1;
-    
-    // Initialize with default gold rates
-    this.initDefaultGoldRates();
   }
 
-  private initDefaultGoldRates() {
+  async initDefaultGoldRates(): Promise<void> {
+    // Check if we already have gold rates
+    const existingRates = await this.getGoldRates();
+    if (existingRates.length > 0) {
+      return;
+    }
+    
+    // Initialize with default gold rates
     const defaultRates: InsertGoldRate[] = [
       { purity: "24k", ratePerGram: 6250 },
       { purity: "22k", ratePerGram: 5750 },
@@ -52,42 +54,33 @@ export class MemStorage implements IStorage {
       { purity: "mixed", ratePerGram: 4200 },
     ];
     
-    defaultRates.forEach(rate => {
-      const id = this.currentGoldRateId++;
-      const goldRate: GoldRate = {
-        ...rate,
-        id,
-        updatedAt: new Date(),
-      };
-      this.goldRates.set(id, goldRate);
-    });
+    for (const rate of defaultRates) {
+      await this.updateGoldRate(rate);
+    }
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
   
   async getGoldRates(): Promise<GoldRate[]> {
-    return Array.from(this.goldRates.values());
+    return await db.select().from(goldRates);
   }
   
   async getGoldRateByPurity(purity: string): Promise<GoldRate | undefined> {
-    return Array.from(this.goldRates.values()).find(
-      (goldRate) => goldRate.purity === purity
-    );
+    const [goldRate] = await db.select().from(goldRates).where(eq(goldRates.purity, purity));
+    return goldRate;
   }
   
   async updateGoldRate(insertGoldRate: InsertGoldRate): Promise<GoldRate> {
@@ -96,25 +89,25 @@ export class MemStorage implements IStorage {
     
     if (existingRate) {
       // Update existing rate
-      const updatedRate: GoldRate = {
-        ...existingRate,
-        ratePerGram: insertGoldRate.ratePerGram,
-        updatedAt: new Date(),
-      };
-      this.goldRates.set(existingRate.id, updatedRate);
+      const [updatedRate] = await db.update(goldRates)
+        .set({ 
+          ratePerGram: insertGoldRate.ratePerGram,
+          updatedAt: new Date(),
+        })
+        .where(eq(goldRates.id, existingRate.id))
+        .returning();
       return updatedRate;
     } else {
       // Create new rate
-      const id = this.currentGoldRateId++;
-      const goldRate: GoldRate = {
-        ...insertGoldRate,
-        id,
-        updatedAt: new Date(),
-      };
-      this.goldRates.set(id, goldRate);
+      const [goldRate] = await db.insert(goldRates)
+        .values({
+          ...insertGoldRate,
+          updatedAt: new Date(),
+        })
+        .returning();
       return goldRate;
     }
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
