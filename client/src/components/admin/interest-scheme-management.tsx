@@ -71,12 +71,12 @@ export default function InterestSchemeManagement() {
         return;
       }
       const label = newLabel.trim();
-      if (!label || !/^[\w\s%.-]+$/.test(label)) {
-        toast({ title: "Error", description: "Label is required and can only contain letters, numbers, spaces, and . - %", variant: "destructive" });
+      if (!label) {
+        toast({ title: "Error", description: "Label is required", variant: "destructive" });
         return;
       }
       addMutation.mutate({ 
-        rate: parseFloat(rate.toFixed(1)),
+        rate: Number(rate.toFixed(2)),
         label: label
       });
       setNewRate("");
