@@ -24,13 +24,13 @@ export interface IStorage {
   updateGoldRate(goldRate: InsertGoldRate): Promise<GoldRate>;
   
   // Session store
-  sessionStore: session.SessionStore;
+  sessionStore: any; // Use any type to avoid LSP issues
   // Initialize default gold rates if needed
   initDefaultGoldRates(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
-  sessionStore: session.SessionStore;
+  sessionStore: any; // Use any type to avoid LSP issues
 
   constructor() {
     this.sessionStore = new PostgresSessionStore({ 

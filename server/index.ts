@@ -1,6 +1,54 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { storage } from "./storage";
+import { db } from "./db";
+import { scrypt, randomBytes } from "crypto";
+import { promisify } from "util";
+
+const scryptAsync = promisify(scrypt);
+
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
+
+// Initialize the database with default users if they don't exist
+async function initializeDatabase() {
+  log("Initializing database...");
+  
+  // Initialize gold rates
+  await storage.initDefaultGoldRates();
+  
+  // Check if admin user exists
+  const adminUser = await storage.getUserByUsername("admin");
+  if (!adminUser) {
+    // Create admin user
+    const adminPassword = await hashPassword("admin123");
+    await storage.createUser({
+      username: "admin",
+      password: adminPassword,
+      role: "admin"
+    });
+    log("Admin user created");
+  }
+  
+  // Check if regular user exists
+  const regularUser = await storage.getUserByUsername("user");
+  if (!regularUser) {
+    // Create regular user
+    const userPassword = await hashPassword("user123");
+    await storage.createUser({
+      username: "user",
+      password: userPassword,
+      role: "user"
+    });
+    log("Regular user created");
+  }
+  
+  log("Database initialization complete");
+}
 
 const app = express();
 app.use(express.json());
@@ -37,6 +85,13 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize the database before setting up routes
+  try {
+    await initializeDatabase();
+  } catch (error) {
+    log(`Error initializing database: ${error}`);
+  }
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
