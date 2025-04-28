@@ -31,6 +31,7 @@ export default function LoanAmountForm({ onCalculate, onCalculating }: LoanAmoun
   
   const { data: interestSchemes = [] } = useQuery<InterestScheme[]>({
     queryKey: ["/api/interest-schemes"],
+    initialData: [],
   });
   
   const form = useForm<z.infer<typeof formSchema>>({
