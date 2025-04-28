@@ -22,11 +22,11 @@ export default function AdminPage() {
   
   return (
     <main className="container mx-auto px-4 py-8">
-      <div className="space-y-8">
-        <h1 className="text-3xl font-bold text-slate-800">Admin Dashboard</h1>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-slate-800 mb-6">Admin Dashboard</h1>
         
         <Tabs defaultValue="gold-rates" className="w-full">
-          <TabsList className="inline-flex h-12 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-8">
             <TabsTrigger value="gold-rates" className="flex items-center gap-2">
               <Coins className="h-4 w-4" />
               <span>Gold Rate Management</span>
@@ -41,8 +41,8 @@ export default function AdminPage() {
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="gold-rates" className="mt-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
+          <TabsContent value="gold-rates" className="mt-0">
+            <div className="gold-card p-6 bg-white rounded-md shadow-sm">
               <h2 className="text-xl font-semibold mb-6">Gold Rate Management</h2>
               
               <GoldRateForm onSuccess={refetch} />
@@ -61,12 +61,12 @@ export default function AdminPage() {
             </div>
           </TabsContent>
           
-          <TabsContent value="users" className="mt-6">
+          <TabsContent value="users" className="mt-0">
             <UserManagement />
           </TabsContent>
           
-          <TabsContent value="schemes" className="mt-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
+          <TabsContent value="schemes" className="mt-0">
+            <div className="bg-white rounded-md shadow-sm p-6">
               <h2 className="text-xl font-semibold mb-6">Interest Scheme Management</h2>
               <InterestSchemeManagement />
             </div>

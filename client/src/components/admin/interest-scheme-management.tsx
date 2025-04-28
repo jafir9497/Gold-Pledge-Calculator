@@ -64,30 +64,12 @@ export default function InterestSchemeManagement() {
   });
 
   const handleAdd = () => {
-    try {
-      const rate = parseFloat(newRate);
-      if (isNaN(rate) || rate <= 0) {
-        toast({ title: "Error", description: "Rate must be a positive number", variant: "destructive" });
-        return;
-      }
-      const label = newLabel.trim();
-      if (!label) {
-        toast({ title: "Error", description: "Label is required", variant: "destructive" });
-        return;
-      }
-      addMutation.mutate({ 
-        rate: Number(rate.toFixed(2)),
-        label: label
-      });
-      setNewRate("");
-      setNewLabel("");
-    } catch (error) {
-      toast({ 
-        title: "Error", 
-        description: "Failed to add scheme. Please try again.", 
-        variant: "destructive" 
-      });
+    const rate = parseFloat(newRate);
+    if (isNaN(rate)) {
+      toast({ title: "Error", description: "Invalid rate", variant: "destructive" });
+      return;
     }
+    addMutation.mutate({ rate, label: newLabel });
   };
 
   const handleUpdate = (id: number) => {
