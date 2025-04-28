@@ -73,9 +73,7 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
         return;
       }
 
-      // Format phone number (remove spaces and add country code if needed)
-      const formattedNumber = phoneNumber.replace(/\s+/g, '');
-      const whatsappNumber = formattedNumber.startsWith('+') ? formattedNumber.substring(1) : formattedNumber;
+      const whatsappNumber = `91${phoneNumber}`;
       
       // Create WhatsApp URL with phone number and message
       const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(shareMessageText)}`;
@@ -184,14 +182,27 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
             <DialogTitle>Enter Customer's Phone Number</DialogTitle>
           </DialogHeader>
           <div className="py-6">
-            <Input
-              type="tel"
-              placeholder="Enter phone number (with country code)"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-            />
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <span className="text-gray-500">+91</span>
+              </div>
+              <Input
+                type="tel"
+                placeholder="9876543210"
+                value={phoneNumber}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Strip any non-numeric characters
+                  const numericValue = value.replace(/\D/g, '');
+                  // Limit to 10 digits
+                  const truncatedValue = numericValue.slice(0, 10);
+                  setPhoneNumber(truncatedValue);
+                }}
+                className="pl-12"
+              />
+            </div>
             <p className="text-sm text-gray-500 mt-2">
-              Format: Country code + Number (e.g., +919876543210)
+              Enter 10-digit mobile number
             </p>
           </div>
           <DialogFooter>
