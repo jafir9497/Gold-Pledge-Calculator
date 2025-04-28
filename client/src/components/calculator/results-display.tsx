@@ -62,67 +62,35 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
   const handleShareViaWhatsApp = async () => {
     try {
       setIsSharingImage(true);
-      // Generate the image data URL
       const dataUrl = await createDataUrl(results);
-      setImageDataUrl(dataUrl);
+      
+      // Create a blob from data URL
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      const file = new File([blob], "gold-calculation.jpg", { type: "image/jpeg" });
 
-      // Open contact selection dialog
-      setIsContactDialogOpen(true);
+      // Use general WhatsApp share
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareMessageText)}`;
+      window.open(whatsappUrl, "_blank");
+      
+      // Also trigger file download
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = 'gold-calculation.jpg';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+      
       setIsSharingImage(false);
     } catch (error) {
       setIsSharingImage(false);
       toast({
         title: "Error",
-        description: "Failed to generate image. Please try again.",
+        description: "Failed to share calculation. Please try again.",
         variant: "destructive",
       });
-    }
-  };
-
-  const handleShareWithContact = () => {
-    // Remove any non-digit characters
-    const phoneNumber = customNumber.replace(/\D/g, "");
-
-    if (phoneNumber.length < 10) {
-      toast({
-        title: "Invalid Number",
-        description: "Please enter a valid phone number",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Create a blob from data URL
-    if (imageDataUrl) {
-      fetch(imageDataUrl)
-        .then(res => res.blob())
-        .then(blob => {
-          // Create a file from the blob
-          const file = new File([blob], "gold-calculation.jpg", { type: "image/jpeg" });
-
-          // Create a WhatsApp share URL with the phone number (without text)
-          const whatsappUrl = `https://wa.me/${phoneNumber}`;
-
-          // Try to share the file - this may not work in all browsers
-          if (navigator.share) {
-            navigator.share({
-              files: [file]
-            }).catch(() => {
-              // Fallback to opening WhatsApp without text
-              window.open(whatsappUrl, "_blank");
-            });
-          } else {
-            // Fallback to opening WhatsApp without text
-            window.open(whatsappUrl, "_blank");
-          }
-
-          setIsContactDialogOpen(false);
-        });
-    } else {
-      // If no image, just open WhatsApp chat
-      const whatsappUrl = `https://wa.me/${phoneNumber}`;
-      window.open(whatsappUrl, "_blank");
-      setIsContactDialogOpen(false);
     }
   };
 
@@ -213,36 +181,7 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
         </CardContent>
       </Card>
 
-      {/* Phone Number Input Dialog - Simplified */}
-      <Dialog open={isContactDialogOpen} onOpenChange={setIsContactDialogOpen}>
-        <DialogContent className="sm:max-w-[350px]">
-          <DialogHeader>
-            <DialogTitle>Enter Phone Number</DialogTitle>
-            <DialogDescription>
-              Enter the WhatsApp number where you'd like to share the calculation
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-2">
-            <div className="flex items-center gap-2">
-              <Input
-                id="phone"
-                value={customNumber}
-                onChange={(e) => setCustomNumber(e.target.value)}
-                placeholder="Enter phone number with country code"
-                className="flex-1"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button onClick={handleShareWithContact} className="w-full bg-green-600 hover:bg-green-700" type="submit">
-              <FaWhatsapp className="mr-2 h-4 w-4" />
-              Share via WhatsApp
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      
     </>
   );
 }
