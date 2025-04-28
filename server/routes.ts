@@ -52,7 +52,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate loan details
       const interestAmount = loanAmount * (interestRate / 100);
       const eligibleAmount = loanAmount - interestAmount;
-      const goldWeight = loanAmount / goldRate.ratePerGram;
+      
+      // Adjust gold weight based on interest rate
+      // Base calculation is loanAmount / goldRate.ratePerGram
+      // Apply interest rate adjustment factor: higher interest rates need less gold
+      let baseWeight = loanAmount / goldRate.ratePerGram;
+      
+      // Adjustment factor - For lower interest rates, increase required gold weight
+      // If interest rate is 2%, multiplier is 1.0
+      // If interest rate is 0.5%, multiplier is around 1.25
+      const interestAdjustmentFactor = 1 + ((2 - interestRate) / 8);
+      const goldWeight = baseWeight * interestAdjustmentFactor;
       
       const result: LoanCalculation = {
         purity,
@@ -84,7 +94,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Calculate loan details
-      const loanAmount = goldWeight * goldRate.ratePerGram;
+      // Adjust loan amount based on interest rate
+      // Base calculation is goldWeight * goldRate.ratePerGram
+      let baseLoanAmount = goldWeight * goldRate.ratePerGram;
+      
+      // Adjustment factor - For higher interest rates, decrease loan amount
+      // If interest rate is 2%, multiplier is around 0.8
+      // If interest rate is 0.5%, multiplier is 1.0
+      const interestAdjustmentFactor = 1 - ((interestRate - 0.5) / 7.5);
+      const loanAmount = baseLoanAmount * interestAdjustmentFactor;
+      
       const interestAmount = loanAmount * (interestRate / 100);
       const eligibleAmount = loanAmount - interestAmount;
       
