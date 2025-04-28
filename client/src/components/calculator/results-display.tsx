@@ -1,20 +1,12 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { LoanCalculation } from "@shared/schema";
-import { formatCurrency, formatWeight, getGoldPurityLabel, createWhatsAppLink, createDataUrl } from "@/lib/utils";
-import { Calculator, Download, Image, Loader2, Share, Users } from "lucide-react";
+import { formatCurrency, formatWeight, getGoldPurityLabel, createDataUrl } from "@/lib/utils";
+import { Calculator, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FaWhatsapp } from "react-icons/fa";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
 interface ResultsDisplayProps {
@@ -25,7 +17,6 @@ interface ResultsDisplayProps {
 export default function ResultsDisplay({ results, isCalculating }: ResultsDisplayProps) {
   const [isSharingImage, setIsSharingImage] = useState(false);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
-  const [selectedContact, setSelectedContact] = useState("");
   const [customNumber, setCustomNumber] = useState("");
   const [imageDataUrl, setImageDataUrl] = useState("");
   const { toast } = useToast();
@@ -89,26 +80,13 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
   };
   
   const handleShareWithContact = () => {
-    let phoneNumber = "";
+    // Remove any non-digit characters
+    const phoneNumber = customNumber.replace(/\D/g, "");
     
-    if (selectedContact === "custom" && customNumber) {
-      // Remove any non-digit characters
-      phoneNumber = customNumber.replace(/\D/g, "");
-      
-      if (phoneNumber.length < 10) {
-        toast({
-          title: "Invalid Number",
-          description: "Please enter a valid phone number",
-          variant: "destructive",
-        });
-        return;
-      }
-    } else if (selectedContact) {
-      phoneNumber = selectedContact;
-    } else {
+    if (phoneNumber.length < 10) {
       toast({
-        title: "No Contact Selected",
-        description: "Please select a contact to share with",
+        title: "Invalid Number",
+        description: "Please enter a valid phone number",
         variant: "destructive",
       });
       return;
@@ -122,29 +100,27 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
           // Create a file from the blob
           const file = new File([blob], "gold-calculation.jpg", { type: "image/jpeg" });
           
-          // Create a WhatsApp share URL with the phone number
-          const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(shareMessageText)}`;
+          // Create a WhatsApp share URL with the phone number (without text)
+          const whatsappUrl = `https://wa.me/${phoneNumber}`;
           
           // Try to share the file - this may not work in all browsers
           if (navigator.share) {
             navigator.share({
-              title: "Gold Loan Calculation",
-              text: shareMessageText,
               files: [file]
             }).catch(() => {
-              // Fallback to opening WhatsApp with just the text
+              // Fallback to opening WhatsApp without text
               window.open(whatsappUrl, "_blank");
             });
           } else {
-            // Fallback to opening WhatsApp with just the text
+            // Fallback to opening WhatsApp without text
             window.open(whatsappUrl, "_blank");
           }
           
           setIsContactDialogOpen(false);
         });
     } else {
-      // If no image, just share the text
-      const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(shareMessageText)}`;
+      // If no image, just open WhatsApp chat
+      const whatsappUrl = `https://wa.me/${phoneNumber}`;
       window.open(whatsappUrl, "_blank");
       setIsContactDialogOpen(false);
     }
@@ -237,72 +213,29 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
         </CardContent>
       </Card>
       
-      {/* Contact Selection Dialog */}
+      {/* Phone Number Input Dialog - Simplified */}
       <Dialog open={isContactDialogOpen} onOpenChange={setIsContactDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[350px]">
           <DialogHeader>
-            <DialogTitle>Share with Contact</DialogTitle>
-            <DialogDescription>
-              Select a contact to share the calculation with via WhatsApp.
-            </DialogDescription>
+            <DialogTitle>Enter Phone Number</DialogTitle>
           </DialogHeader>
           
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="contact" className="text-right">
-                Contact
-              </Label>
-              <Select
-                value={selectedContact}
-                onValueChange={setSelectedContact}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select a contact" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="919898989898">Manager</SelectItem>
-                  <SelectItem value="919797979797">Office</SelectItem>
-                  <SelectItem value="919696969696">Branch Manager</SelectItem>
-                  <SelectItem value="custom">Custom Number</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="py-2">
+            <div className="flex items-center gap-2">
+              <Input
+                id="phone"
+                value={customNumber}
+                onChange={(e) => setCustomNumber(e.target.value)}
+                placeholder="Enter phone number with country code"
+                className="flex-1"
+              />
             </div>
-            
-            {selectedContact === "custom" && (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="phone" className="text-right">
-                  Phone
-                </Label>
-                <Input
-                  id="phone"
-                  value={customNumber}
-                  onChange={(e) => setCustomNumber(e.target.value)}
-                  placeholder="Enter phone number with country code"
-                  className="col-span-3"
-                />
-              </div>
-            )}
-            
-            {imageDataUrl && (
-              <div className="mt-4 border rounded-md overflow-hidden">
-                <img 
-                  src={imageDataUrl} 
-                  alt="Calculation Result" 
-                  className="w-full h-auto"
-                />
-              </div>
-            )}
           </div>
-          <DialogFooter className="flex gap-2">
-            {imageDataUrl && (
-              <Button variant="outline" onClick={handleDownloadImage} type="button">
-                <Download className="mr-2 h-4 w-4" />
-                Download Image
-              </Button>
-            )}
-            <Button onClick={handleShareWithContact} type="submit">
+          
+          <DialogFooter>
+            <Button onClick={handleShareWithContact} className="w-full bg-green-600 hover:bg-green-700" type="submit">
               <FaWhatsapp className="mr-2 h-4 w-4" />
-              Share
+              Share via WhatsApp
             </Button>
           </DialogFooter>
         </DialogContent>
