@@ -16,6 +16,8 @@ interface ResultsDisplayProps {
 
 export default function ResultsDisplay({ results, isCalculating }: ResultsDisplayProps) {
   const [isSharingImage, setIsSharingImage] = useState(false);
+  const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState("");
   const { toast } = useToast();
 
   if (isCalculating) {
@@ -55,9 +57,6 @@ Principal Amount: ${formatCurrency(results.principalAmount)}
 Interest Amount: ${formatCurrency(results.interestAmount)}
 Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
 `.trim();
-
-  const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState("");
 
   const handleShareViaWhatsApp = () => {
     setIsContactDialogOpen(true);
