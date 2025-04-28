@@ -1,12 +1,10 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { LoanCalculation } from "@shared/schema";
-import { formatCurrency, formatWeight, getGoldPurityLabel, createDataUrl } from "@/lib/utils";
+import { formatCurrency, formatWeight, getGoldPurityLabel, createDataUrl, createWhatsAppLink } from "@/lib/utils";
 import { Calculator, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FaWhatsapp } from "react-icons/fa";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
 interface ResultsDisplayProps {
@@ -59,33 +57,11 @@ Interest Amount: ${formatCurrency(results.interestAmount)}
 Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
 `.trim();
 
-  const handleShareViaWhatsApp = async () => {
+  const handleShareViaWhatsApp = () => {
     try {
-      setIsSharingImage(true);
-      const dataUrl = await createDataUrl(results);
-      
-      // Create a blob from data URL
-      const response = await fetch(dataUrl);
-      const blob = await response.blob();
-      const file = new File([blob], "gold-calculation.jpg", { type: "image/jpeg" });
-
-      // Use general WhatsApp share
-      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareMessageText)}`;
+      const whatsappUrl = createWhatsAppLink(shareMessageText);
       window.open(whatsappUrl, "_blank");
-      
-      // Also trigger file download
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = 'gold-calculation.jpg';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
-      
-      setIsSharingImage(false);
     } catch (error) {
-      setIsSharingImage(false);
       toast({
         title: "Error",
         description: "Failed to share calculation. Please try again.",
