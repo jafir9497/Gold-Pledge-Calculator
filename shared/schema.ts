@@ -23,9 +23,9 @@ export const interestSchemes = pgTable("interest_schemes", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertInterestSchemeSchema = createInsertSchema(interestSchemes).pick({
-  rate: true,
-  label: true,
+export const insertInterestSchemeSchema = z.object({
+  rate: z.number().positive("Rate must be positive"),
+  label: z.string().min(1, "Label is required"),
 });
 
 export type InsertInterestScheme = z.infer<typeof insertInterestSchemeSchema>;
