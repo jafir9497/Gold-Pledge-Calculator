@@ -143,7 +143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const users = await storage.getAllUsers();
       // Never send passwords to frontend
-      const usersWithoutPasswords = users.map((user: User) => {
+      const usersWithoutPasswords = users.map((user) => {
         const { password, ...userWithoutPassword } = user;
         return userWithoutPassword;
       });

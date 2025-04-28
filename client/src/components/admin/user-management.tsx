@@ -41,12 +41,12 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { insertUserSchema } from "@shared/schema";
 
 // Extended schema with validation
-const userFormSchema = insertUserSchema.extend({
-  password: z
-    .string()
-    .min(6, "Password must be at least 6 characters")
-    .max(100, "Password is too long"),
+// Adding validations and confirmPassword field
+const userFormSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
+  role: z.enum(["admin", "user"]).default("user"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
@@ -79,24 +79,23 @@ export default function UserManagement() {
     },
   });
 
+  // Create schema for edit form
+  const editFormSchema = z.object({
+    username: z.string().min(3, "Username must be at least 3 characters"),
+    role: z.enum(["admin", "user"]).default("user"),
+    password: z.string().min(6, "Password must be at least 6 characters").optional(),
+    confirmPassword: z.string().optional(),
+  }).refine(
+    (data) => !data.password || !data.confirmPassword || data.password === data.confirmPassword, 
+    {
+      message: "Passwords do not match",
+      path: ["confirmPassword"],
+    }
+  );
+
   // Edit user form
-  const editForm = useForm<Partial<z.infer<typeof userFormSchema>>>({
-    resolver: zodResolver(
-      userFormSchema
-        .omit({ password: true, confirmPassword: true })
-        .extend({
-          password: z.string().min(6).max(100).optional(),
-          confirmPassword: z.string().optional(),
-        })
-        .refine(
-          (data) => 
-            !data.password || !data.confirmPassword || data.password === data.confirmPassword, 
-          {
-            message: "Passwords do not match",
-            path: ["confirmPassword"],
-          }
-        )
-    ),
+  const editForm = useForm<z.infer<typeof editFormSchema>>({
+    resolver: zodResolver(editFormSchema),
     defaultValues: {
       username: "",
       role: "user",
@@ -195,7 +194,7 @@ export default function UserManagement() {
   const handleEditUser = (user: User) => {
     editForm.reset({
       username: user.username,
-      role: user.role,
+      role: user.role as "admin" | "user", // Type assertion to make TypeScript happy
       password: "",
       confirmPassword: "",
     });
