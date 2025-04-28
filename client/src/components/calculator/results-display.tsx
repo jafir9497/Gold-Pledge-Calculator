@@ -5,7 +5,7 @@ import { Calculator, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FaWhatsapp } from "react-icons/fa";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,7 +20,7 @@ export default function ResultsDisplay({ results, isCalculating }: ResultsDispla
   const [customNumber, setCustomNumber] = useState("");
   const [imageDataUrl, setImageDataUrl] = useState("");
   const { toast } = useToast();
-  
+
   if (isCalculating) {
     return (
       <Card className="h-full">
@@ -31,7 +31,7 @@ export default function ResultsDisplay({ results, isCalculating }: ResultsDispla
       </Card>
     );
   }
-  
+
   if (!results) {
     return (
       <Card className="h-full">
@@ -42,9 +42,9 @@ export default function ResultsDisplay({ results, isCalculating }: ResultsDispla
       </Card>
     );
   }
-  
+
   const isPrimaryValueWeight = results.goldWeight !== undefined;
-  
+
   const shareMessageText = `
 Gold Loan Calculation:
 
@@ -65,7 +65,7 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
       // Generate the image data URL
       const dataUrl = await createDataUrl(results);
       setImageDataUrl(dataUrl);
-      
+
       // Open contact selection dialog
       setIsContactDialogOpen(true);
       setIsSharingImage(false);
@@ -78,11 +78,11 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
       });
     }
   };
-  
+
   const handleShareWithContact = () => {
     // Remove any non-digit characters
     const phoneNumber = customNumber.replace(/\D/g, "");
-    
+
     if (phoneNumber.length < 10) {
       toast({
         title: "Invalid Number",
@@ -91,7 +91,7 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
       });
       return;
     }
-    
+
     // Create a blob from data URL
     if (imageDataUrl) {
       fetch(imageDataUrl)
@@ -99,10 +99,10 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
         .then(blob => {
           // Create a file from the blob
           const file = new File([blob], "gold-calculation.jpg", { type: "image/jpeg" });
-          
+
           // Create a WhatsApp share URL with the phone number (without text)
           const whatsappUrl = `https://wa.me/${phoneNumber}`;
-          
+
           // Try to share the file - this may not work in all browsers
           if (navigator.share) {
             navigator.share({
@@ -115,7 +115,7 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
             // Fallback to opening WhatsApp without text
             window.open(whatsappUrl, "_blank");
           }
-          
+
           setIsContactDialogOpen(false);
         });
     } else {
@@ -125,10 +125,10 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
       setIsContactDialogOpen(false);
     }
   };
-  
+
   const handleDownloadImage = () => {
     if (!imageDataUrl) return;
-    
+
     // Create a temporary anchor element
     const link = document.createElement("a");
     link.href = imageDataUrl;
@@ -137,23 +137,23 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
     link.click();
     document.body.removeChild(link);
   };
-  
+
   return (
     <>
       <Card className="h-full results-display">
         <CardContent className="p-6">
           <h3 className="text-lg font-semibold mb-4 text-slate-800">Calculation Results</h3>
-          
+
           <div className="space-y-4">
             <div className="bg-gold-50 p-4 rounded-md border border-gold-100">
               <h4 className="font-medium text-slate-800 mb-1">Loan Details</h4>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="text-gray-600">Gold Purity:</div>
                 <div className="font-medium text-gray-900">{getGoldPurityLabel(results.purity)}</div>
-                
+
                 <div className="text-gray-600">Interest Rate:</div>
                 <div className="font-medium text-gray-900">{results.interestRate}%</div>
-                
+
                 <div className="text-gray-600">Rate Per Gram:</div>
                 <div className="font-medium text-gray-900">
                   {formatCurrency(isPrimaryValueWeight 
@@ -162,7 +162,7 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-gold-50 p-4 rounded-md border border-gold-100">
               <h4 className="font-medium text-slate-800 mb-1">
                 {isPrimaryValueWeight ? "Required Gold Weight" : "Eligible Loan Amount"}
@@ -178,7 +178,7 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
                   : "Maximum loan amount based on your gold weight."}
               </p>
             </div>
-            
+
             <div className="p-4 rounded-md border border-gray-200">
               <h4 className="font-medium text-slate-800 mb-1">Loan Breakdown</h4>
               <div className="space-y-2 text-sm">
@@ -212,7 +212,7 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
           </div>
         </CardContent>
       </Card>
-      
+
       {/* Phone Number Input Dialog - Simplified */}
       <Dialog open={isContactDialogOpen} onOpenChange={setIsContactDialogOpen}>
         <DialogContent className="sm:max-w-[350px]">
@@ -222,7 +222,7 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
               Enter the WhatsApp number where you'd like to share the calculation
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-2">
             <div className="flex items-center gap-2">
               <Input
@@ -234,7 +234,7 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
               />
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button onClick={handleShareWithContact} className="w-full bg-green-600 hover:bg-green-700" type="submit">
               <FaWhatsapp className="mr-2 h-4 w-4" />
