@@ -6,19 +6,20 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { interestSchemes, LoanCalculation } from "@shared/schema";
-import { useMutation } from "@tanstack/react-query";
+import { LoanCalculation, InterestScheme } from "@shared/schema";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getGoldPurityLabel } from "@/lib/utils";
+import { useEffect } from "react";
 
 const formSchema = z.object({
   loanAmount: z.coerce.number().positive("Amount must be positive").min(1000, "Minimum loan amount is ₹1,000"),
   purity: z.enum(["24k", "22k", "18k", "mixed"], {
     required_error: "Please select gold purity",
   }),
-  interestRate: z.coerce.number().positive("Interest rate must be positive"),
+  interestSchemeId: z.coerce.number().positive("Interest scheme must be selected"),
 });
 
 interface LoanAmountFormProps {
@@ -28,16 +29,33 @@ interface LoanAmountFormProps {
 
 export default function LoanAmountForm({ onCalculate, onCalculating }: LoanAmountFormProps) {
   const { toast } = useToast();
-  
+
+  // Fetch interest schemes from backend
+  const { data: interestSchemes, isLoading: isLoadingSchemes } = useQuery<InterestScheme[]>({
+    queryKey: ["interest-schemes"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/interest-schemes");
+      return res.json();
+    },
+  });
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       loanAmount: undefined,
       purity: "24k",
-      interestRate: 0.5,
+      interestSchemeId: undefined,
     },
   });
-  
+
+  // Set default interest scheme when loaded
+  useEffect(() => {
+    if (interestSchemes && interestSchemes.length > 0 && !form.getValues().interestSchemeId) {
+      form.setValue("interestSchemeId", interestSchemes[0].id);
+    }
+    // eslint-disable-next-line
+  }, [interestSchemes]);
+
   const calculateMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
       const res = await apiRequest("POST", "/api/calculate/by-amount", data);
@@ -61,12 +79,12 @@ export default function LoanAmountForm({ onCalculate, onCalculating }: LoanAmoun
       });
     },
   });
-  
+
   function onSubmit(values: z.infer<typeof formSchema>) {
     onCalculating();
     calculateMutation.mutate(values);
   }
-  
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -81,11 +99,11 @@ export default function LoanAmountForm({ onCalculate, onCalculating }: LoanAmoun
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <span className="text-gray-500">₹</span>
                   </div>
-                  <Input 
-                    placeholder="100000" 
-                    type="number" 
-                    className="pl-8" 
-                    {...field} 
+                  <Input
+                    placeholder="100000"
+                    type="number"
+                    className="pl-8"
+                    {...field}
                   />
                 </div>
               </FormControl>
@@ -96,7 +114,7 @@ export default function LoanAmountForm({ onCalculate, onCalculating }: LoanAmoun
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="purity"
@@ -131,16 +149,17 @@ export default function LoanAmountForm({ onCalculate, onCalculating }: LoanAmoun
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
-          name="interestRate"
+          name="interestSchemeId"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Interest Scheme</FormLabel>
-              <Select 
-                onValueChange={(value) => field.onChange(parseFloat(value))} 
-                defaultValue={field.value.toString()}
+              <Select
+                onValueChange={(value) => field.onChange(Number(value))}
+                value={field.value ? String(field.value) : undefined}
+                disabled={isLoadingSchemes || !interestSchemes}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -148,9 +167,9 @@ export default function LoanAmountForm({ onCalculate, onCalculating }: LoanAmoun
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {interestSchemes.map((scheme) => (
-                    <SelectItem key={scheme.id} value={scheme.rate.toString()}>
-                      {scheme.label}
+                  {interestSchemes && interestSchemes.map((scheme) => (
+                    <SelectItem key={scheme.id} value={String(scheme.id)}>
+                      {scheme.label} ({scheme.rate}%)
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -159,9 +178,9 @@ export default function LoanAmountForm({ onCalculate, onCalculating }: LoanAmoun
             </FormItem>
           )}
         />
-        
-        <Button 
-          type="submit" 
+
+        <Button
+          type="submit"
           className="w-full bg-gold-600 hover:bg-gold-700"
           disabled={calculateMutation.isPending}
         >

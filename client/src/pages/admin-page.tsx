@@ -3,48 +3,53 @@ import { useAuth } from "@/hooks/use-auth";
 import GoldRateForm from "@/components/admin/gold-rate-form";
 import GoldRatesTable from "@/components/admin/gold-rates-table";
 import UserManagement from "@/components/admin/user-management";
+import InterestSchemeManagement from "@/components/admin/interest-scheme-management";
 import { Redirect } from "wouter";
 import { Loader2, Coins, Users } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function AdminPage() {
   const { user } = useAuth();
-  
+
   const { data: goldRates = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: ["/api/gold-rates"],
   });
-  
+
   // Redirect if not an admin
   if (user && user.role !== "admin") {
     return <Redirect to="/" />;
   }
-  
+
   return (
     <main className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-800 mb-6">Admin Dashboard</h1>
-        
+
         <Tabs defaultValue="gold-rates" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
+          <TabsList className="grid w-full grid-cols-3 mb-8">
             <TabsTrigger value="gold-rates" className="flex items-center gap-2">
               <Coins className="h-4 w-4" />
               <span>Gold Rate Management</span>
+            </TabsTrigger>
+            <TabsTrigger value="interest-schemes" className="flex items-center gap-2">
+              <Coins className="h-4 w-4" />
+              <span>Interest Scheme Management</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               <span>User Management</span>
             </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="gold-rates" className="mt-0">
             <div className="gold-card p-6 bg-white rounded-md shadow-sm">
               <h2 className="text-xl font-semibold mb-6">Gold Rate Management</h2>
-              
+
               <GoldRateForm onSuccess={refetch} />
-              
+
               <div className="mt-10">
                 <h3 className="text-lg font-semibold mb-4">Current Gold Rates</h3>
-                
+
                 {isLoading ? (
                   <div className="flex justify-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin text-gold-600" />
@@ -55,13 +60,17 @@ export default function AdminPage() {
               </div>
             </div>
           </TabsContent>
-          
+
+          <TabsContent value="interest-schemes" className="mt-0">
+            <InterestSchemeManagement />
+          </TabsContent>
+
           <TabsContent value="users" className="mt-0">
             <UserManagement />
           </TabsContent>
         </Tabs>
       </div>
-      
+
       {/* Calculator section for admin to test */}
       <div className="mt-12 bg-white rounded-md shadow-sm p-6">
         <h2 className="text-xl font-semibold mb-6">Admin Calculator Access</h2>

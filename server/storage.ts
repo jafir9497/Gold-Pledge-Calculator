@@ -1,9 +1,10 @@
-import { 
-  users, type User, type InsertUser, 
-  goldRates, type GoldRate, type InsertGoldRate 
+import {
+  users, type User, type InsertUser,
+  goldRates, type GoldRate, type InsertGoldRate,
+  interestSchemes, type InterestScheme, type InsertInterestScheme
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -20,12 +21,20 @@ export interface IStorage {
   updateUser(id: number, userData: Partial<User>): Promise<User>;
   deleteUser(id: number): Promise<void>;
   getAllUsers(): Promise<User[]>;
-  
+
   // Gold rate methods
   getGoldRates(): Promise<GoldRate[]>;
-  getGoldRateByPurity(purity: string): Promise<GoldRate | undefined>;
+  getGoldRate(purity: string, interestSchemeId: number): Promise<GoldRate | undefined>;
   updateGoldRate(goldRate: InsertGoldRate): Promise<GoldRate>;
-  
+  deleteGoldRate(id: number): Promise<void>;
+
+  // Interest scheme methods
+  getInterestSchemes(): Promise<InterestScheme[]>;
+  getInterestScheme(id: number): Promise<InterestScheme | undefined>;
+  createInterestScheme(scheme: InsertInterestScheme): Promise<InterestScheme>;
+  updateInterestScheme(id: number, scheme: Partial<InsertInterestScheme>): Promise<InterestScheme>;
+  deleteInterestScheme(id: number): Promise<void>;
+
   // Session store
   sessionStore: any; // Use any type to avoid LSP issues
   // Initialize default gold rates if needed
@@ -36,30 +45,14 @@ export class DatabaseStorage implements IStorage {
   sessionStore: any; // Use any type to avoid LSP issues
 
   constructor() {
-    this.sessionStore = new PostgresSessionStore({ 
-      pool, 
-      createTableIfMissing: true 
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true
     });
   }
 
   async initDefaultGoldRates(): Promise<void> {
-    // Check if we already have gold rates
-    const existingRates = await this.getGoldRates();
-    if (existingRates.length > 0) {
-      return;
-    }
-    
-    // Initialize with default gold rates
-    const defaultRates: InsertGoldRate[] = [
-      { purity: "24k", ratePerGram: 6250 },
-      { purity: "22k", ratePerGram: 5750 },
-      { purity: "18k", ratePerGram: 4650 },
-      { purity: "mixed", ratePerGram: 4200 },
-    ];
-    
-    for (const rate of defaultRates) {
-      await this.updateGoldRate(rate);
-    }
+    // No-op for now, as gold rates are now per scheme
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -76,7 +69,7 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
-  
+
   async updateUser(id: number, userData: Partial<User>): Promise<User> {
     const [updatedUser] = await db.update(users)
       .set(userData)
@@ -84,32 +77,32 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updatedUser;
   }
-  
+
   async deleteUser(id: number): Promise<void> {
     await db.delete(users).where(eq(users.id, id));
   }
-  
+
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
   }
-  
+
   async getGoldRates(): Promise<GoldRate[]> {
     return await db.select().from(goldRates);
   }
-  
-  async getGoldRateByPurity(purity: string): Promise<GoldRate | undefined> {
-    const [goldRate] = await db.select().from(goldRates).where(eq(goldRates.purity, purity));
+
+  async getGoldRate(purity: string, interestSchemeId: number): Promise<GoldRate | undefined> {
+    const [goldRate] = await db.select().from(goldRates).where(and(eq(goldRates.purity, purity), eq(goldRates.interestSchemeId, interestSchemeId)));
     return goldRate;
   }
-  
+
   async updateGoldRate(insertGoldRate: InsertGoldRate): Promise<GoldRate> {
-    // Find if rate already exists for this purity
-    const existingRate = await this.getGoldRateByPurity(insertGoldRate.purity);
-    
+    // Find if rate already exists for this purity and scheme
+    const existingRate = await this.getGoldRate(insertGoldRate.purity, insertGoldRate.interestSchemeId);
+
     if (existingRate) {
       // Update existing rate
       const [updatedRate] = await db.update(goldRates)
-        .set({ 
+        .set({
           ratePerGram: insertGoldRate.ratePerGram,
           updatedAt: new Date(),
         })
@@ -126,6 +119,33 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return goldRate;
     }
+  }
+
+  async deleteGoldRate(id: number): Promise<void> {
+    await db.delete(goldRates).where(eq(goldRates.id, id));
+  }
+
+  async getInterestSchemes(): Promise<InterestScheme[]> {
+    return await db.select().from(interestSchemes);
+  }
+
+  async getInterestScheme(id: number): Promise<InterestScheme | undefined> {
+    const [scheme] = await db.select().from(interestSchemes).where(eq(interestSchemes.id, id));
+    return scheme;
+  }
+
+  async createInterestScheme(scheme: InsertInterestScheme): Promise<InterestScheme> {
+    const [created] = await db.insert(interestSchemes).values(scheme).returning();
+    return created;
+  }
+
+  async updateInterestScheme(id: number, scheme: Partial<InsertInterestScheme>): Promise<InterestScheme> {
+    const [updated] = await db.update(interestSchemes).set(scheme).where(eq(interestSchemes.id, id)).returning();
+    return updated;
+  }
+
+  async deleteInterestScheme(id: number): Promise<void> {
+    await db.delete(interestSchemes).where(eq(interestSchemes.id, id));
   }
 }
 

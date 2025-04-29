@@ -27,7 +27,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // setup auth routes
   setupAuth(app);
 
-  // Gold rates routes
+  // Interest Schemes CRUD
+  app.get("/api/interest-schemes", async (_req: Request, res: Response) => {
+    try {
+      const schemes = await storage.getInterestSchemes();
+      res.json(schemes);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch interest schemes" });
+    }
+  });
+
+  app.post("/api/interest-schemes", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { rate, label } = req.body;
+      if (typeof rate !== "number" || !label) {
+        return res.status(400).json({ message: "Invalid interest scheme data" });
+      }
+      const scheme = await storage.createInterestScheme({ rate, label });
+      res.status(201).json(scheme);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create interest scheme" });
+    }
+  });
+
+  app.put("/api/interest-schemes/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid scheme ID" });
+      const scheme = await storage.updateInterestScheme(id, req.body);
+      res.json(scheme);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update interest scheme" });
+    }
+  });
+
+  app.delete("/api/interest-schemes/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid scheme ID" });
+      await storage.deleteInterestScheme(id);
+      res.status(200).json({ message: "Interest scheme deleted" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete interest scheme" });
+    }
+  });
+
+  // Gold Rates CRUD
   app.get("/api/gold-rates", async (_req: Request, res: Response) => {
     try {
       const goldRates = await storage.getGoldRates();
@@ -50,42 +95,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Loan calculation routes
+  app.delete("/api/gold-rates/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid gold rate ID" });
+      await storage.deleteGoldRate(id);
+      res.status(200).json({ message: "Gold rate deleted" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete gold rate" });
+    }
+  });
+
+  // Loan calculation routes (updated)
   app.post("/api/calculate/by-amount", async (req: Request, res: Response) => {
     try {
       const validatedData = loanByAmountSchema.parse(req.body);
-      const { loanAmount, purity, interestRate } = validatedData;
-      
-      // Get gold rate for the selected purity
-      const goldRate = await storage.getGoldRateByPurity(purity);
+      const { loanAmount, purity, interestSchemeId } = validatedData;
+      const goldRate = await storage.getGoldRate(purity, interestSchemeId);
       if (!goldRate) {
-        return res.status(404).json({ message: `Gold rate for ${purity} not found` });
+        return res.status(404).json({ message: `Gold rate for ${purity} and scheme not found` });
       }
-      
+      const interestScheme = await storage.getInterestScheme(interestSchemeId);
+      if (!interestScheme) {
+        return res.status(404).json({ message: `Interest scheme not found` });
+      }
       // Calculate loan details
-      const interestAmount = loanAmount * (interestRate / 100);
+      const interestAmount = loanAmount * (interestScheme.rate / 100);
       const eligibleAmount = loanAmount - interestAmount;
-      
-      // Adjust gold weight based on interest rate
-      // Base calculation is loanAmount / goldRate.ratePerGram
-      // Apply interest rate adjustment factor: higher interest rates need less gold
       let baseWeight = loanAmount / goldRate.ratePerGram;
-      
-      // Adjustment factor - For lower interest rates, increase required gold weight
-      // If interest rate is 2%, multiplier is 1.0
-      // If interest rate is 0.5%, multiplier is around 1.25
-      const interestAdjustmentFactor = 1 + ((2 - interestRate) / 8);
+      const interestAdjustmentFactor = 1 + ((2 - interestScheme.rate) / 8);
       const goldWeight = baseWeight * interestAdjustmentFactor;
-      
-      const result: LoanCalculation = {
+      const result = {
         purity,
-        interestRate,
+        interestScheme,
         principalAmount: loanAmount,
         interestAmount,
         eligibleAmount,
         goldWeight,
       };
-      
       res.json(result);
     } catch (error) {
       if (error instanceof ZodError) {
@@ -98,37 +145,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/calculate/by-weight", async (req: Request, res: Response) => {
     try {
       const validatedData = loanByWeightSchema.parse(req.body);
-      const { goldWeight, purity, interestRate } = validatedData;
-      
-      // Get gold rate for the selected purity
-      const goldRate = await storage.getGoldRateByPurity(purity);
+      const { goldWeight, purity, interestSchemeId } = validatedData;
+      const goldRate = await storage.getGoldRate(purity, interestSchemeId);
       if (!goldRate) {
-        return res.status(404).json({ message: `Gold rate for ${purity} not found` });
+        return res.status(404).json({ message: `Gold rate for ${purity} and scheme not found` });
       }
-      
-      // Calculate loan details
-      // Adjust loan amount based on interest rate
-      // Base calculation is goldWeight * goldRate.ratePerGram
+      const interestScheme = await storage.getInterestScheme(interestSchemeId);
+      if (!interestScheme) {
+        return res.status(404).json({ message: `Interest scheme not found` });
+      }
       let baseLoanAmount = goldWeight * goldRate.ratePerGram;
-      
-      // Adjustment factor - For higher interest rates, decrease loan amount
-      // If interest rate is 2%, multiplier is around 0.8
-      // If interest rate is 0.5%, multiplier is 1.0
-      const interestAdjustmentFactor = 1 - ((interestRate - 0.5) / 7.5);
+      const interestAdjustmentFactor = 1 - ((interestScheme.rate - 0.5) / 7.5);
       const loanAmount = baseLoanAmount * interestAdjustmentFactor;
-      
-      const interestAmount = loanAmount * (interestRate / 100);
+      const interestAmount = loanAmount * (interestScheme.rate / 100);
       const eligibleAmount = loanAmount - interestAmount;
-      
-      const result: LoanCalculation = {
+      const result = {
         purity,
-        interestRate,
+        interestScheme,
         principalAmount: loanAmount,
         interestAmount,
         eligibleAmount,
         loanAmount,
       };
-      
       res.json(result);
     } catch (error) {
       if (error instanceof ZodError) {
@@ -156,22 +194,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/users", requireAdmin, async (req: Request, res: Response) => {
     try {
       const validatedData = insertUserSchema.parse(req.body);
-      
+
       // Check if username already exists
       const existingUser = await storage.getUserByUsername(validatedData.username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
       }
-      
+
       // Hash the password
       const hashedPassword = await hashPassword(validatedData.password);
-      
+
       // Create the user
       const user = await storage.createUser({
         ...validatedData,
         password: hashedPassword,
       });
-      
+
       // Return user without password
       const { password, ...userWithoutPassword } = user;
       res.status(201).json(userWithoutPassword);
@@ -189,15 +227,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(userId)) {
         return res.status(400).json({ message: "Invalid user ID" });
       }
-      
+
       const existingUser = await storage.getUser(userId);
       if (!existingUser) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Validate only the fields that are being updated
       const validatedData = req.body;
-      
+
       // If username is being changed, check if it already exists
       if (validatedData.username && validatedData.username !== existingUser.username) {
         const userWithSameUsername = await storage.getUserByUsername(validatedData.username);
@@ -205,15 +243,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Username already exists" });
         }
       }
-      
+
       // If password is being updated, hash it
       if (validatedData.password) {
         validatedData.password = await hashPassword(validatedData.password);
       }
-      
+
       // Update the user
       const updatedUser = await storage.updateUser(userId, validatedData);
-      
+
       // Return user without password
       const { password, ...userWithoutPassword } = updatedUser;
       res.json(userWithoutPassword);
@@ -228,17 +266,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(userId)) {
         return res.status(400).json({ message: "Invalid user ID" });
       }
-      
+
       // Don't allow deleting current user (admin who is logged in)
       if (userId === req.user?.id) {
         return res.status(400).json({ message: "Cannot delete your own account" });
       }
-      
+
       const existingUser = await storage.getUser(userId);
       if (!existingUser) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       await storage.deleteUser(userId);
       res.status(200).json({ message: "User deleted successfully" });
     } catch (error) {

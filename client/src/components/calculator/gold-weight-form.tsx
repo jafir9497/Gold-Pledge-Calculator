@@ -6,19 +6,20 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { interestSchemes, LoanCalculation } from "@shared/schema";
-import { useMutation } from "@tanstack/react-query";
+import { LoanCalculation, InterestScheme } from "@shared/schema";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getGoldPurityLabel } from "@/lib/utils";
+import { useEffect } from "react";
 
 const formSchema = z.object({
   goldWeight: z.coerce.number().positive("Weight must be positive").min(0.1, "Minimum gold weight is 0.1 gram"),
   purity: z.enum(["24k", "22k", "18k", "mixed"], {
     required_error: "Please select gold purity",
   }),
-  interestRate: z.coerce.number().positive("Interest rate must be positive"),
+  interestSchemeId: z.coerce.number().positive("Interest scheme must be selected"),
 });
 
 interface GoldWeightFormProps {
@@ -28,16 +29,33 @@ interface GoldWeightFormProps {
 
 export default function GoldWeightForm({ onCalculate, onCalculating }: GoldWeightFormProps) {
   const { toast } = useToast();
-  
+
+  // Fetch interest schemes from backend
+  const { data: interestSchemes, isLoading: isLoadingSchemes } = useQuery<InterestScheme[]>({
+    queryKey: ["interest-schemes"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/interest-schemes");
+      return res.json();
+    },
+  });
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       goldWeight: undefined,
       purity: "24k",
-      interestRate: 0.5,
+      interestSchemeId: undefined,
     },
   });
-  
+
+  // Set default interest scheme when loaded
+  useEffect(() => {
+    if (interestSchemes && interestSchemes.length > 0 && !form.getValues().interestSchemeId) {
+      form.setValue("interestSchemeId", interestSchemes[0].id);
+    }
+    // eslint-disable-next-line
+  }, [interestSchemes]);
+
   const calculateMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
       const res = await apiRequest("POST", "/api/calculate/by-weight", data);
@@ -61,12 +79,12 @@ export default function GoldWeightForm({ onCalculate, onCalculating }: GoldWeigh
       });
     },
   });
-  
+
   function onSubmit(values: z.infer<typeof formSchema>) {
     onCalculating();
     calculateMutation.mutate(values);
   }
-  
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -77,11 +95,11 @@ export default function GoldWeightForm({ onCalculate, onCalculating }: GoldWeigh
             <FormItem>
               <FormLabel>Gold Weight (grams)</FormLabel>
               <FormControl>
-                <Input 
-                  placeholder="10" 
-                  type="number" 
+                <Input
+                  placeholder="10"
+                  type="number"
                   step="0.01"
-                  {...field} 
+                  {...field}
                 />
               </FormControl>
               <FormDescription>
@@ -91,7 +109,7 @@ export default function GoldWeightForm({ onCalculate, onCalculating }: GoldWeigh
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="purity"
@@ -126,16 +144,17 @@ export default function GoldWeightForm({ onCalculate, onCalculating }: GoldWeigh
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
-          name="interestRate"
+          name="interestSchemeId"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Interest Scheme</FormLabel>
-              <Select 
-                onValueChange={(value) => field.onChange(parseFloat(value))} 
-                defaultValue={field.value.toString()}
+              <Select
+                onValueChange={(value) => field.onChange(Number(value))}
+                value={field.value ? String(field.value) : undefined}
+                disabled={isLoadingSchemes || !interestSchemes}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -143,9 +162,9 @@ export default function GoldWeightForm({ onCalculate, onCalculating }: GoldWeigh
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {interestSchemes.map((scheme) => (
-                    <SelectItem key={scheme.id} value={scheme.rate.toString()}>
-                      {scheme.label}
+                  {interestSchemes && interestSchemes.map((scheme) => (
+                    <SelectItem key={scheme.id} value={String(scheme.id)}>
+                      {scheme.label} ({scheme.rate}%)
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -154,9 +173,9 @@ export default function GoldWeightForm({ onCalculate, onCalculating }: GoldWeigh
             </FormItem>
           )}
         />
-        
-        <Button 
-          type="submit" 
+
+        <Button
+          type="submit"
           className="w-full bg-gold-600 hover:bg-gold-700"
           disabled={calculateMutation.isPending}
         >

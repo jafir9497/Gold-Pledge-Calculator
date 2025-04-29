@@ -48,11 +48,11 @@ export default function ResultsDisplay({ results, isCalculating }: ResultsDispla
 Gold Loan Calculation:
 
 Gold Purity: ${getGoldPurityLabel(results.purity)}
-Interest Rate: ${results.interestRate}%
+Interest Scheme: ${results.interestScheme.label} (${results.interestScheme.rate}%)
 Rate Per Gram: ${formatCurrency(isPrimaryValueWeight ? results.principalAmount / results.goldWeight! : results.principalAmount / (results.loanAmount! / results.principalAmount * results.goldWeight!))} per gram
-${isPrimaryValueWeight 
-  ? `Required Gold Weight: ${formatWeight(results.goldWeight!)}`
-  : `Loan Amount: ${formatCurrency(results.loanAmount!)}`}
+${isPrimaryValueWeight
+      ? `Required Gold Weight: ${formatWeight(results.goldWeight!)}`
+      : `Loan Amount: ${formatCurrency(results.loanAmount!)}`}
 Principal Amount: ${formatCurrency(results.principalAmount)}
 Interest Amount: ${formatCurrency(results.interestAmount)}
 Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
@@ -74,7 +74,7 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
       }
 
       const whatsappNumber = `91${phoneNumber}`;
-      
+
       // Create WhatsApp URL with phone number and message
       const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(shareMessageText)}`;
       window.open(whatsappUrl, "_blank");
@@ -114,14 +114,12 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
                 <div className="text-gray-600">Gold Purity:</div>
                 <div className="font-medium text-gray-900">{getGoldPurityLabel(results.purity)}</div>
 
-                <div className="text-gray-600">Interest Rate:</div>
-                <div className="font-medium text-gray-900">{results.interestRate}%</div>
+                <div className="text-gray-600">Interest Scheme:</div>
+                <div className="font-medium text-gray-900">{results.interestScheme.label} ({results.interestScheme.rate}%)</div>
 
                 <div className="text-gray-600">Rate Per Gram:</div>
                 <div className="font-medium text-gray-900">
-                  {formatCurrency(isPrimaryValueWeight 
-                    ? results.principalAmount / results.goldWeight! 
-                    : results.principalAmount / (results.loanAmount! / results.principalAmount * results.goldWeight!))}
+                  {formatCurrency(isPrimaryValueWeight ? results.principalAmount / results.goldWeight! : results.principalAmount / (results.loanAmount! / results.principalAmount * results.goldWeight!))}
                 </div>
               </div>
             </div>
@@ -131,13 +129,13 @@ Eligible Loan Amount: ${formatCurrency(results.eligibleAmount)}
                 {isPrimaryValueWeight ? "Required Gold Weight" : "Eligible Loan Amount"}
               </h4>
               <div className="text-2xl font-bold text-gold-600 mb-2">
-                {isPrimaryValueWeight 
-                  ? formatWeight(results.goldWeight!) 
+                {isPrimaryValueWeight
+                  ? formatWeight(results.goldWeight!)
                   : formatCurrency(results.eligibleAmount)}
               </div>
               <p className="text-xs text-gray-600">
-                {isPrimaryValueWeight 
-                  ? "Weight of gold required for your desired loan amount." 
+                {isPrimaryValueWeight
+                  ? "Weight of gold required for your desired loan amount."
                   : "Maximum loan amount based on your gold weight."}
               </p>
             </div>
